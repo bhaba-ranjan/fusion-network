@@ -102,8 +102,8 @@ rosbag_play_process = subprocess.Popen(
     ['rosbag', 'play', '--clock', rosbag_path, '-u', '6'])
 
 lidar = message_filters.Subscriber('/velodyne_points', PointCloud2)
-rgb = message_filters.Subscriber('/camera/rgb/image_raw/compressed', CompressedImage)
-odom = message_filters.Subscriber('/jackal_velocity_controller/odom', Odometry)
+rgb = message_filters.Subscriber('/image_raw/compressed', CompressedImage)
+odom = message_filters.Subscriber('/odom', Odometry)
 ts = message_filters.ApproximateTimeSynchronizer([lidar, rgb, odom], 100, 0.05, allow_headerless=True)
 
 ts.registerCallback(aprrox_sync_callback)
