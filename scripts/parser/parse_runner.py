@@ -12,7 +12,7 @@ for idx, file in enumerate(file_list):
         process = subprocess.Popen([
             'python3', 'bagfile_parser.py', os.path.join(str('../../bagfiles'),file)
         ])
-        print(">>>>>>>>>>>>>>>>>> Processing file:", file)
+        print(f"\t\t>>>>>>>>>>>>>>>>>> Processing file: {file} at index: {idx} / {len(file_list)}")
     
         while True:
             if process.poll() is not None:

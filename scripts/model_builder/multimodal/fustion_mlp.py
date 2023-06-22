@@ -17,8 +17,8 @@ class FusionMLP(nn.Module):
         self.linear2 = nn.Linear(490581,256)
         self.linear3 = nn.Linear(124344,128)
         self.linear4 = nn.Linear(3*128,64)
-        self.linear5 = nn.Linear(64,32)
-        self.linear6 = nn.Linear(32,16)
+        self.linear5 = nn.GRU(64,32)
+        self.linear6 = nn.GRU(32,16)
         self.linear7 = nn.Linear(16,2)
 
         self.bn1 = nn.BatchNorm1d(512)
@@ -34,6 +34,7 @@ class FusionMLP(nn.Module):
         self.act4 = nn.ReLU()
         self.act5 = nn.ReLU()
         self.act6 = nn.ReLU()
+        self.act7 = nn.ReLU()
 
 
     def forward(self, input_l1, input_l2, input_l3, goal, prev_cmd_vel):
@@ -55,13 +56,14 @@ class FusionMLP(nn.Module):
         x = self.bn4(self.linear4(x))
         x = self.act4(x)  
 
-        x = self.bn5(self.linear5(x))
+        x, h = self.linear5(x)
         x = self.act5(x)  
         
-        x = self.bn6(self.linear6(x))
+        x, h = self.linear6(x)
         x = self.act6(x)  
         
         x = self.linear7(x)
+        x = self.act7(x) 
         
         return x
 

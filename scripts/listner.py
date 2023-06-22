@@ -29,7 +29,7 @@ pcl_history = []
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-ckpt = torch.load("/home/ranjan/Workspace/my_works/fusion-network/scripts/fusion_model_at_val_loss_0.7496246003856262.pth")
+ckpt = torch.load("/home/ranjan/Workspace/my_works/fusion-network/model_ckpt/fusion_model_at_val_loss_0.7496246003856262.pth")
 model = BcFusionModel()
 model.load_state_dict(ckpt['model_state_dict'])
 model.to(device)
@@ -88,7 +88,7 @@ def aprrox_sync_callback(lidar, rgb, odom):
     cmd_vel = odom.twist.twist
     # This function is called at 10Hz
     # Subsampling at each 5th second approx
-    if counter['sub-sampler'] % 8 == 0:
+    if counter['sub-sampler'] % 6 == 0:
         # TODO: these 4 values will be pickled at index counter['index'] except image
         img = store_image(rgb)
         
