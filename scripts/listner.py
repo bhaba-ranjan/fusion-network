@@ -28,10 +28,11 @@ image_history = []
 pcl_history = []
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-ckpt = torch.load("/home/ranjan/Workspace/my_works/fusion-network/model_ckpt/fusion_model_at_val_loss_0.7496246003856262.pth")
+print("loading model")
+ckpt = torch.load("/home/ranjan/Workspace/my_works/fusion-network/scripts/Model_at_epoch_200_val_loss1.2703322208593462")
 model = BcFusionModel()
 model.load_state_dict(ckpt['model_state_dict'])
+print("model loaded")
 model.to(device)
 model.eval()
 constant_goal = None
@@ -39,7 +40,7 @@ constant_goal = None
 def odom_callback(odom):
     position = odom.pose.pose.position
     cmd_vel = odom.twist.twist
-
+    # print('odeom')
     # print((cmd_vel.linear.x, cmd_vel.angular.z))
     # store 20 latest liner and angular velocities
     previous_velocities.insert(0, (cmd_vel.linear.x, cmd_vel.angular.z))
@@ -86,6 +87,7 @@ def get_goal():
 def aprrox_sync_callback(lidar, rgb, odom):
     pos = odom.pose.pose.position
     cmd_vel = odom.twist.twist
+    # print('arrox callback------------------------------------------------')
     # This function is called at 10Hz
     # Subsampling at each 5th second approx
     if counter['sub-sampler'] % 6 == 0:
@@ -102,15 +104,16 @@ def aprrox_sync_callback(lidar, rgb, odom):
         
 
         point_cloud = get_lidar_points(lidar)
-        print("before append len image hisotry", len(pcl_history))
+        # print("before append len image hisotry", len(pcl_history))
 
         pcl_history.append(point_cloud)
 
-        print("before len image hisotry", len(pcl_history))
+        # print("before len image hisotry", len(pcl_history))
         if len(pcl_history) > 4:
             pcl_history.pop(0)
 
-        print("after len image hisotry", len(pcl_history))
+        if len(pcl_history) < 3: 
+            print("after len image hisotry", len(pcl_history))
         prev_cmd_vel = get_prev_cmd_val()
         # prev_cmd_vel.pop()
         
@@ -120,7 +123,7 @@ def aprrox_sync_callback(lidar, rgb, odom):
 
             print("inference......")
             filtered_pcl = get_filtered_pcl(pcl_history)
-            print(len(prev_cmd_vel))
+            # print(len(prev_cmd_vel))
             local_goal = get_goal()
             print(f'local goal {local_goal}')
             align_content = {
@@ -143,10 +146,10 @@ def aprrox_sync_callback(lidar, rgb, odom):
                 lcg= lcg.to(device)
                 prev_cmd_vel= prev_cmd_vel.to(device)
 
-                print(stacked_images.shape)
-                print(pcl.shape)
-                print(lcg.shape)
-                print(prev_cmd_vel.shape)
+                # print(stacked_images.shape)
+                # print(pcl.shape)
+                # print(lcg.shape)
+                # print(prev_cmd_vel.shape)
 
 
                 pred_fusion, pred_img, pred_pcl = model(stacked_images, pcl, lcg, prev_cmd_vel)
@@ -187,7 +190,7 @@ cmd_publisher = rospy.Publisher('cmd_vel', Twist, queue_size=10)
 
 lidar = message_filters.Subscriber('/velodyne_points', PointCloud2)
 rgb = message_filters.Subscriber('/zed_node/rgb/image_rect_color/compressed', CompressedImage)
-odom = message_filters.Subscriber('zed_node/odom', Odometry)
+odom = message_filters.Subscriber('/zed_node/odom', Odometry)
 lc_goal = message_filters.Subscriber('/move_base_simple/goal', PoseStamped)
 
 ts = message_filters.ApproximateTimeSynchronizer([lidar, rgb, odom], 100, 0.05, allow_headerless=True)
@@ -197,7 +200,7 @@ odom.registerCallback(odom_callback)
 lc_goal.registerCallback(set_lc_goal)
 
 
-
+print("here")
 rospy.spin()
 
 
