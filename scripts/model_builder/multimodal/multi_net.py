@@ -31,8 +31,8 @@ class MultiModalNet(nn.Module):
         self.image.load_state_dict(self.image_weights, strict=False)
         self.pcl.load_state_dict(self.pcl_weights, strict=False)
 
-        set_trainable_false(self.image)
-        set_trainable_false(self.pcl)
+        # set_trainable_false(self.image.backbone)
+        # set_trainable_false(self.pcl.backbone_pcl)
 
         self.fusion_featuers = nn.Sequential(
             nn.Linear(63888+512, 512),

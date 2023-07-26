@@ -24,6 +24,8 @@ experiment = Experiment(
     workspace="bhabaranjan",
 )
 
+experiment.add_tag('L1-points')
+
 coloredlogs.install()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -38,7 +40,7 @@ val_dict = {}
 # model_storage_path = '/home/ranjan/Workspace/my_works/fusion-network/scripts'
 
 root_path = '/scratch/bpanigr/fusion-network/recorded-data/'
-model_storage_path = '/home/bpanigr'
+model_storage_path = '/home/bpanigr/multimodal-points'
 
 
 def clear_dict(dict, epoch):
@@ -81,7 +83,7 @@ def get_loss(loss_fn, pts, gt_pts, data_src):
 def run_validation(val_files, model, batch_size, epoch, optim):
        print("Running Validation..\n")
        running_error = []
-       loss = torch.nn.MSELoss()
+       loss = torch.nn.L1Loss()
        model.eval()
        with torch.no_grad():
         for val_file in val_files:
@@ -104,8 +106,6 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 gt_pts= gt_pts.to(device)
                 
                 pts = model(stacked_images, pcl, local_goal)
-                
-
                 # gt_x = torch.unsqueeze(gt_cmd_vel[:,0],1)
                 # gt_y = torch.unsqueeze(gt_cmd_vel[:,1],1)
 
@@ -139,7 +139,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/multi_modal{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/L1-multi_modal{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   {avg_loss_on_validation} \n')
         return avg_loss_on_validation
@@ -147,19 +147,19 @@ def run_validation(val_files, model, batch_size, epoch, optim):
 
 
 def run_training(train_files, val_dirs, batch_size, num_epochs):
-    loss = torch.nn.MSELoss()
+    loss = torch.nn.L1Loss()
     model = MultiModalNet()    
 
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr=0.00001)     
+    optim = torch.optim.Adam(model.parameters(), lr=0.0000028)     
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # run_validation(val_dirs, model, batch_size, 2, optim)
     
-    # ckpt = torch.load('/scratch/bpanigr/fusion-network/way_latest_model_at_40_2.343480117061302.pth')
+    # ckpt = torch.load('/home/bpanigr/multi_modal120_0.029111537005207532.pth')
     # model.load_state_dict(ckpt['model_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
-    scheduler = MultiStepLR(optim, milestones= [15,50,100], gamma=.6)
+    scheduler = MultiStepLR(optim, milestones= [60, 130], gamma=.55)
 
     data_dict = {}
     for epoch in range(num_epochs):
