@@ -42,7 +42,7 @@ val_dict = {}
 # model_storage_path = '/home/ranjan/Workspace/my_works/fusion-network/scripts'
 
 root_path = '/scratch/bpanigr/fusion-network/recorded-data'
-model_storage_path = '/home/bpanigr/Workspace/lin_angler_model'
+model_storage_path = '/scratch/bpanigr/model_weights/ann'
 
 def get_loss_fun(loss_type = None):
     if loss_type == 'mse':
@@ -145,8 +145,9 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    # ckpt = torch.load('/scratch/bpanigr/fusion-network/way_latest_model_at_40_2.343480117061302.pth')
-    # model.load_state_dict(ckpt['model_state_dict'])
+    ckpt = torch.load('/home/bpanigr/Workspace/lin_angler_model/intrep_2_multi_modal_velocities_80.pth')
+    model.load_state_dict(ckpt['model_state_dict'])
+    optim.load_state_dict(ckpt['optimizer_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     scheduler = MultiStepLR(optim, milestones= [30,70,130], gamma=.75)
@@ -241,11 +242,11 @@ def main():
 
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136021_wt')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/138181_wt')
-    train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135968_wt_at')
+    # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135968_wt_at')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
 
-    batch_size = 24
+    batch_size = 12
     epochs = 350
     run_training(train_dirs, val_dirs, batch_size, epochs)
 
