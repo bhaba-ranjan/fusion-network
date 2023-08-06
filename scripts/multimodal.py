@@ -25,7 +25,7 @@ experiment = Experiment(
     workspace="bhabaranjan",
 )
 
-experiment.add_tag('tf-lin-anglr-bc')
+experiment.add_tag('tf-simple-lin-anglr')
 experiment.log_asset('/scratch/bpanigr/fusion-network/scripts/model_builder/multimodal/multi_net.py')
 
 coloredlogs.install()
@@ -78,7 +78,7 @@ def get_loss(loss_fn, pts, gt_pts, data_src):
     if data_src == 'validation':     
         error = loss_fn(pts, gt_pts)
     else:
-        error = (0.99 * loss_fn(pts, gt_pts) )+ (0.01 * l2(pts, gt_pts)) 
+        error = (0.994 * loss_fn(pts, gt_pts) )+ (0.006 * l2(pts, gt_pts)) 
     return error
 
 
@@ -130,7 +130,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/lin_and_angler_only_multi_modal_velocities_{epoch+1}.pth')
+            }, f'{model_storage_path}/simple_lin_and_angler_only_multi_modal_velocities_{epoch+1}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
@@ -145,12 +145,12 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    # ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/resume_0.01_angler_only_multi_modal_velocities_60.pth')
+    # ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/lin_and_angler_only_multi_modal_velocities_20.pth')
     # model.load_state_dict(ckpt['model_state_dict'])
     # optim.load_state_dict(ckpt['optimizer_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
-    scheduler = MultiStepLR(optim, milestones= [50,100,130], gamma=0.90)
+    scheduler = MultiStepLR(optim, milestones= [40,100,130], gamma=0.90)
 
     data_dict = {}
     # optim.param_groups[0]['lr'] = 0.00000688

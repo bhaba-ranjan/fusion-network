@@ -33,28 +33,17 @@ class MultiModalNet(nn.Module):
         set_trainable_false(self.image)
         set_trainable_false(self.pcl)
 
-        self.modality_fusion_layer = nn.Sequential(
-            nn.Linear(1024+512,2304),
-            nn.ELU(),
-            nn.Linear(2304,1024),
-            nn.ELU()
-        )
-
         self.global_path_fusion = nn.Sequential(
-            nn.Linear(44,256),
-            nn.LeakyReLU(),
-            nn.Linear(256,128),
-            nn.LeakyReLU()
+            nn.Linear(44,128),
+            nn.LeakyReLU()            
         )
 
         self.joint_perception_path_feautres = nn.Sequential(
-            nn.Linear(128+1024,1024),
-            nn.LeakyReLU(),
-            nn.Linear(1024,512),
-            nn.LeakyReLU()
+            nn.Linear(128+1024+512,1024),
+            nn.LeakyReLU()            
         )
 
-        self.predict = nn.Linear(512,2)
+        self.predict = nn.Linear(1024,2)
 
     def forward(self, stacked_images, pcl, local_goal):
         
@@ -63,14 +52,13 @@ class MultiModalNet(nn.Module):
         rnn_pcl_out, final_pcl_feat = self.pcl(pcl, local_goal)
 
         backbone_feats = torch.cat([rnn_pcl_out, rnn_img_out], dim=-1)
-        fustion_features = self.modality_fusion_layer(backbone_feats)        
         
 
         second_layer_features = torch.cat([final_pcl_feat,final_img_feat], dim=-1)
         global_path_encoding = self.global_path_fusion(second_layer_features)
         
 
-        final_features_concat = torch.cat([global_path_encoding,fustion_features], dim=-1).unsqueeze(0)
+        final_features_concat = torch.cat([global_path_encoding, backbone_feats], dim=-1).unsqueeze(0)
         
         final_feat = self.transformer(final_features_concat)        
 
