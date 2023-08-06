@@ -11,6 +11,7 @@ import pyquaternion as pq
 from torch.utils.data import Dataset
 from scipy.spatial.transform import Rotation as R
 from data_builder.transformer_pcl import get_voxelized_points
+from data_builder.gaussian_weights import get_gaussian_weights
 
 coloredlogs.install()
 
@@ -51,16 +52,22 @@ class ApplyTransformation(Dataset):
         self.point_clouds = self.input_data['pcl']
         self.way_pts = self.input_data['local_goal']        
         self.robot_position  = self.input_data['robot_pos']
+
+        images = [ self.image_transforms(self.image)]
+        stacked_images = torch.cat(images, dim=0)
         
         
         # Transform local goal into robot frame
         tf_matrix = get_transformation_matrix(self.robot_position[0],self.robot_position[1])     
         tf_inverse = np.linalg.pinv(tf_matrix)
 
-        goals = np.concatenate([ np.array(self.way_pts), np.ones((6,1))], axis=1).transpose()
+        goals = np.concatenate([ np.array(self.way_pts), np.ones((12,1))], axis=1).transpose()
 
-        all_pts = np.matmul(tf_inverse, goals) * 150
-        all_pts = all_pts[:2, :-1]
+        all_pts = np.matmul(tf_inverse, goals) * get_gaussian_weights(6,3)
+
+        all_pts = all_pts[:2, :]
+
+        way_pts = all_pts[:, :-1]
         local_goal = all_pts[:, -1]
 
 
@@ -68,7 +75,6 @@ class ApplyTransformation(Dataset):
         point_clouds = get_voxelized_points(point_clouds)
 
 
-
         local_goal = torch.tensor(local_goal, dtype=torch.float32).ravel()        
 
-        return (point_clouds, local_goal, all_pts)
+        return (stacked_images, point_clouds, local_goal, way_pts)
