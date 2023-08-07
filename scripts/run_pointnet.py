@@ -36,7 +36,7 @@ min_val_error = 100000
 
 val_dict = {}
 
-weights = get_gaussian_weights(7.5,4.5)
+weights = get_gaussian_weights(6,3)
 weights = weights[:,:-1] 
 weights = np.concatenate([weights, weights], axis=1)
 weights = torch.tensor(weights)
@@ -76,6 +76,10 @@ def get_loss(loss_fn, pts, gt_pts, data_src):
     experiment.log_metric(name = str('lerror_'+data_src), value=error.item())    
     return error
 
+def get_utility_error(utility, pred):
+    l1 = torch.nn.L1Loss()
+    distance = l1(utility, pred)
+    return distance
 
 def run_validation(val_files, model, batch_size, epoch, optim):
        print("Running Validation..\n")
@@ -103,7 +107,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 
                 gt_pts= gt_pts.to(device)
                 
-                pts = model(pcl, local_goal)
+                utility, pts = model(pcl, local_goal)
                 
 
                 # gt_x = torch.unsqueeze(gt_cmd_vel[:,0],1)
@@ -141,7 +145,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'/scratch/bpanigr/fusion-network/pcl_backbone_changed_model_at_{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'/scratch/bpanigr/fusion-network/pcl_full_ann_utility_sep_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   {avg_loss_on_validation} \n')
         return avg_loss_on_validation
@@ -162,7 +166,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # return
 
     # optim.param_groups[0]['lr'] = 0.000004
-    scheduler = MultiStepLR(optim, milestones= [30,50,80], gamma=.8)
+    scheduler = MultiStepLR(optim, milestones= [40,90,140], gamma=.85)
 
     # print(scheduler.get_last_lr())
     data_dict = {}
@@ -199,7 +203,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
                 # print(f"{pcl.shape = }")
                 optim.zero_grad()
                 
-                pts = model(pcl, local_goal)
+                utility, pts = model(pcl, local_goal)
                 
 
                 # print(fsn_lin)
@@ -211,15 +215,15 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
                 # error_fusion = get_loss(loss, fsn_lin, fsn_anglr, gt_x, gt_y,'train_fusion')
                 # error_img = get_loss(loss, img_lin, img_anglr, gt_x, gt_y, 'train_img')
                 error_pcl = get_loss(loss, pts, gt_pts,'train_pcl')
-                
-                # error_total = error_fusion + error_img + error_pcl
+                error_utiliy = get_utility_error(utility, gt_pts)
+                error_total =  error_pcl + error_utiliy
 
                 # per_file_loss_fusion.append(error_fusion.item())
                 # per_file_loss_ǐmage.append(error_img.item())
                 per_file_loss_pcl.append(error_pcl.item())                
                 # per_file_total_loss.append(error_total.item())
 
-                error_pcl.backward()
+                error_total.backward()
                 optim.step()
 
                 # per_file_loss_fusion.append(error_fusion.item())
@@ -258,7 +262,7 @@ def main():
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136021_wt')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/138181_wt')
 
-    batch_size = 40
+    batch_size = 36
     epochs = 250
     run_training(train_dirs, val_dirs, batch_size, epochs)
 
