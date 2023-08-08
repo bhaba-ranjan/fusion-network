@@ -19,20 +19,18 @@ from torch.optim.lr_scheduler import MultiStepLR, CosineAnnealingWarmRestarts, C
 # Create an experiment with your api key
 experiment = Experiment(
     api_key="Ly3Tc8W7kfxPmAxsArJjX9cgo",
-    # project_name= "test",
     project_name="image-only",
     workspace="bhabaranjan",
 )
 
-experiment.add_tag('pcl-RNN-seq-l1')
+experiment.add_tag('changed-transformer-pcl-feat-util')
+experiment.log_asset('/scratch/bpanigr/fusion-network/scripts/model_builder/pcl/pcl_head.py')
 
 coloredlogs.install()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f'Using device ========================================>  {device}')
-
-min_val_error = 100000
 
 val_dict = {}
 
@@ -53,7 +51,7 @@ def get_data_loader(input_file_path, read_type, batch_size):
     logging.info(f'Reading {read_type} file from path {input_file_path}')
     indexer = IndexDataset(input_file_path)
     transformer = ApplyTransformation(indexer)
-    data_loader = DataLoader(transformer, batch_size = batch_size, drop_last=False, prefetch_factor=2,num_workers=12)
+    data_loader = DataLoader(transformer, batch_size = batch_size, drop_last=False, shuffle=True, prefetch_factor=2,num_workers=12)
     return data_loader
 
 def get_loss_prev(loss_fn, lin_vel, angular_vel, gt_lin, gt_angular, data_src):
@@ -68,7 +66,6 @@ def get_loss_prev(loss_fn, lin_vel, angular_vel, gt_lin, gt_angular, data_src):
     experiment.log_metric(name = str('line_error_'+data_src), value=lin_err_val)
     experiment.log_metric(name = str('anglr_error_'+data_src), value=anglr_error_val)
 
-
     return error
 
 def get_loss(loss_fn, pts, gt_pts, data_src):
@@ -77,13 +74,14 @@ def get_loss(loss_fn, pts, gt_pts, data_src):
     return error
 
 def get_utility_error(utility, pred):
-    l1 = torch.nn.L1Loss()
+    l1 = torch.nn.MSELoss()
     distance = l1(utility, pred)
     return distance
 
 def run_validation(val_files, model, batch_size, epoch, optim):
        print("Running Validation..\n")
        running_error = []
+       running_error_util = []
        loss = get_loss_fun()
        model.eval()
        with torch.no_grad():
@@ -95,13 +93,10 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 val_dict[val_file] = val_loader
             else:
                 val_loader = val_dict[val_file]
-
-            per_file_loss_fusion  = []
-            per_file_loss_ǐmage = []
-            per_file_loss_pcl = []
-            per_file_total_loss = []
-            for index, (stacked_images, pcl ,local_goal, gt_pts) in tqdm(enumerate(val_loader)):
-                # stacked_images = stacked_images.to(device)
+            
+            per_file_loss_pcl = []            
+            per_file_util_loss = []
+            for index, (stacked_images, pcl ,local_goal, gt_pts) in tqdm(enumerate(val_loader)):                
                 pcl = pcl.to(device)
                 local_goal= local_goal.to(device)
                 
@@ -110,45 +105,30 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 utility, pts = model(pcl, local_goal)
                 
 
-                # gt_x = torch.unsqueeze(gt_cmd_vel[:,0],1)
-                # gt_y = torch.unsqueeze(gt_cmd_vel[:,1],1)
-
-                # print('\nstart----')
-                # print(pcl_lin)
-                # print(pcl_anglr)
- 
-                # print(gt_x)
-                # print(gt_y)
-                # print('end\n')
-                
-                # error_fusion = get_loss(loss, fsn_lin, fsn_anglr, gt_x, gt_y,'fusion')
-                # error_img = get_loss(loss, img_lin, img_anglr, gt_x, gt_y, 'img')
                 error_pcl = get_loss(loss, pts/weights, gt_pts/weights, 'validation')
-                
-                # error_total = error_fusion + ( 0.2 * error_img) + error_pcl
+                error_util = get_utility_error(utility/weights, gt_pts/weights)
 
-                # per_file_loss_fusion.append(error_fusion.item())
-                # per_file_loss_ǐmage.append(error_img.item())
                 per_file_loss_pcl.append(error_pcl.item())                
-                # per_file_total_loss.append(error_total.item())
-                
-            # experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_img'), value=np.average(per_file_loss_ǐmage), epoch = epoch + 1)
+                per_file_util_loss.append(error_util.item())
+
+
             experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_pcl'), value=np.average(per_file_loss_pcl), epoch = epoch + 1)
-            # experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_fusion'), value=np.average(per_file_loss_fusion), epoch = epoch + 1)
+            experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_util'), value=np.average(per_file_util_loss), epoch = epoch + 1)
 
             running_error.append(np.average(per_file_loss_pcl))
+            running_error_util.append(np.average(per_file_util_loss))
         
-        avg_loss_on_validation = np.average(running_error)
+        avg_loss_on_validation = np.average(running_error)        
         print(f'epoch:------>{epoch}')
         if (epoch+1) % 10 == 0:
             print(f"saving model weights at validation error {avg_loss_on_validation}")
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'/scratch/bpanigr/fusion-network/pcl_full_ann_utility_sep_{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'/scratch/bpanigr/fusion-network/tf_pcl_full_ann_utility_sep_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   {avg_loss_on_validation} \n')
-        return avg_loss_on_validation
+        return avg_loss_on_validation, np.average(running_error_util)        
             
 
 
@@ -156,9 +136,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     loss = get_loss_fun()
     model = PclMLP()
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr=0.0000098)     
-    # run_validation(val_dirs, model, batch_size, 0, optim)
-    # run_validation(val_dirs, model, batch_size, 2, optim)
+    optim = torch.optim.Adam(model.parameters(), lr=0.00001)         
     
     # ckpt = torch.load('/scratch/bpanigr/fusion-network/reformatted_way_pts2_model_at_70_0.016218955743389375.pth')
     # model.load_state_dict(ckpt['model_state_dict'])
@@ -166,15 +144,16 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # return
 
     # optim.param_groups[0]['lr'] = 0.000004
-    scheduler = MultiStepLR(optim, milestones= [40,90,140], gamma=.85)
-
     # print(scheduler.get_last_lr())
+    scheduler = MultiStepLR(optim, milestones= [4, 40,90,140], gamma=.85)
+    
     data_dict = {}
     for epoch in range(num_epochs):
         num_files = 0
         lr = scheduler.get_last_lr()        
         experiment.log_metric( name = "Learning Rate Decay", value = lr, epoch= epoch+1)
         running_loss = []
+        running_loss_util = []
         shuffle(train_files)        
         model.train()
         for train_file in train_files:        
@@ -190,63 +169,46 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
             per_file_loss_fusion = [] 
             per_file_loss_ǐmage = [] 
             per_file_loss_pcl = [] 
-            per_file_total_loss = []
+            per_file_util_loss = []
             for index, (stacked_images, pcl ,local_goal, gt_cmd_vel) in enumerate(train_loader):
 
-                # print(f'gt_cmd: {gt_cmd_vel}')
-                # print(f'prev_cmd_vel:{prev_cmd_vel}')
-                
-                # stacked_images = stacked_images.to(device)
                 pcl = pcl.to(device)
                 local_goal= local_goal.to(device)                
                 gt_pts= gt_cmd_vel.to(device)
-                # print(f"{pcl.shape = }")
+                
                 optim.zero_grad()
                 
                 utility, pts = model(pcl, local_goal)
                 
-
-                # print(fsn_lin)
-                # print(fsn_anglr)
-
-                # print(gt_x)
-                # print(gt_y)
-                
-                # error_fusion = get_loss(loss, fsn_lin, fsn_anglr, gt_x, gt_y,'train_fusion')
-                # error_img = get_loss(loss, img_lin, img_anglr, gt_x, gt_y, 'train_img')
                 error_pcl = get_loss(loss, pts, gt_pts,'train_pcl')
-                error_utiliy = get_utility_error(utility, gt_pts)
-                error_total =  error_pcl + error_utiliy
-
-                # per_file_loss_fusion.append(error_fusion.item())
-                # per_file_loss_ǐmage.append(error_img.item())
-                per_file_loss_pcl.append(error_pcl.item())                
-                # per_file_total_loss.append(error_total.item())
+                error_utiliy = 0.01 * get_utility_error(utility, gt_pts)
+                error_total =  error_pcl + error_utiliy                
+                
 
                 error_total.backward()
                 optim.step()
 
-                # per_file_loss_fusion.append(error_fusion.item())
-                # per_file_loss_ǐmage.append(error_img.item())
+                
                 per_file_loss_pcl.append(error_pcl.item())
-                # per_file_total_loss.append(error_total.item())
-
-                print(f'step is:   {index} and total error is :: {error_pcl.item()}\n')
-            
-            # experiment.log_metric(name = str(train_file.split('/')[-1]+ " mod:" +'img'), value=np.average(per_file_loss_ǐmage), epoch= epoch+1)
+                per_file_util_loss.append(error_utiliy.item())                
+                print(f'step is:   {index} and total error is :: {error_pcl.item()} utility loss: {error_utiliy.item()} \n')
+                        
             experiment.log_metric(name = str(train_file.split('/')[-1]+" mod:" +'pcl'), value=np.average(per_file_loss_pcl), epoch= epoch+1)
-            # experiment.log_metric(name = str(train_file.split('/')[-1]+" mod:" +'fusion'), value=np.average(per_file_loss_fusion), epoch= epoch+1)
+            experiment.log_metric(name = str(train_file.split('/')[-1]+" mod:" +'util'), value=np.average(per_file_util_loss), epoch= epoch+1)
+
             running_loss.append(np.average(per_file_loss_pcl))   
+            running_loss_util.append(np.average(per_file_util_loss))   
             
         scheduler.step()      
         print(f'================== epoch is: {epoch} and error is: {np.average(running_loss)}==================\n')
 
         if (epoch+1) % 2 == 0:
-            val_error = run_validation(val_dirs, model, batch_size, epoch, optim)
-            experiment.log_metric( name = "Avg Validation loss", value = np.average(val_error), epoch= epoch+1)
+            val_error, util_error = run_validation(val_dirs, model, batch_size, epoch, optim)
+            experiment.log_metric( name = "Avg Validation loss", value = val_error, epoch= epoch+1)
+            experiment.log_metric( name = "Avg Validation loss util", value = util_error, epoch= epoch+1)
         # val_error_at_epoch.append(val_error)
         experiment.log_metric( name = "Avg Training loss", value = np.average(running_loss), epoch= epoch+1)
-        
+        experiment.log_metric( name = "Avg Training loss util", value = np.average(running_loss_util), epoch= epoch+1)        
 
 
 def main():
