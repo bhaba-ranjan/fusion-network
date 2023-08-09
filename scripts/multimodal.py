@@ -130,7 +130,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/multi_modal_anglular_at10_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/multi_modal_anglular_at12_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
