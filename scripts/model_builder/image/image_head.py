@@ -14,16 +14,21 @@ class ImageHeadMLP(nn.Module):
 
         super().__init__()
         self.backbone = ImageFusionModel()        
-        self.goal_encoder = make_mlp( [2, 64, 128, 64], 'relu', False, False, 0.0)
+        self.goal_encoder = make_mlp( [2, 128, 64], 'relu', False, False, 0.0)      
 
-        self.lstm_input = 36864+64
-        self.hidden_state_dim = 512
-        self.num_layers = 4
+        self.feat_util = nn.Sequential(
+            nn.Linear(36864,256),            
+            nn.LeakyReLU(),
+            nn.Linear(256,22)            
+        )
 
-        self.rnn = nn.RNN(self.lstm_input, self.hidden_state_dim, self.num_layers, nonlinearity='relu',batch_first=True)
+        self.feat_ext = nn.Sequential(
+            nn.Linear(36864,512),            
+            nn.LeakyReLU()
+        )
 
         self.after_rnn = nn.Sequential(
-            nn.Linear(512,256),            
+            nn.Linear(512+64,256),            
             nn.LeakyReLU()
         )
 
@@ -31,26 +36,19 @@ class ImageHeadMLP(nn.Module):
 
     def forward(self, input, goal):
         
-        h0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim, device='cuda')
-        
         image_features = self.backbone(input)                
         goal = self.goal_encoder(goal)
 
-        img_feat_with_goal = torch.cat([image_features, goal],dim=-1)
+        utility = self.feat_util(image_features)
+        img_feat = self.feat_ext(image_features)
 
-        
-        img_feat_with_goal = img_feat_with_goal.unsqueeze(0)
+        img_feat_with_goal = torch.cat([img_feat, goal],dim=-1)
 
-        rnn_out, _ = self.rnn(img_feat_with_goal, h0)
-        
-        rnn_out = rnn_out.squeeze(0)
-
-       
-        final_feat = self.after_rnn(rnn_out)
+        final_feat = self.after_rnn(img_feat_with_goal)
         
         prediction = self.predict(final_feat)
           
-        return prediction
+        return utility, prediction
 
 
 
