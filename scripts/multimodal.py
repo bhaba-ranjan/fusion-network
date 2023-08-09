@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 import matplotlib.pyplot as plt
 import coloredlogs, logging
-from model_builder.multimodal.multi_net import MultiModalNet
+from model_builder.multimodal.vae import MultiModalVAE
 from data_builder.cmd_scaler import transform_to_gt_scale
 
 
@@ -26,7 +26,7 @@ experiment = Experiment(
 )
 
 experiment.add_tag('transformer-angler-bc')
-experiment.log_asset('/scratch/bpanigr/fusion-network/scripts/model_builder/multimodal/multi_net.py')
+experiment.log_asset('/scratch/bpanigr/fusion-network/scripts/model_builder/multimodal/vae.py')
 
 coloredlogs.install()
 
@@ -130,7 +130,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/multi_modal_anglular_at12_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/vae_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
@@ -138,7 +138,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
 
 def run_training(train_files, val_dirs, batch_size, num_epochs):
     loss = get_loss_fun()
-    model = MultiModalNet()    
+    model = MultiModalVAE()
 
     model.to(device)
     optim = torch.optim.Adam(model.parameters(), lr =0.0000086 )     
@@ -242,10 +242,10 @@ def main():
     val_dirs = [ os.path.join(validation_path, dir) for dir in os.listdir(validation_path)]
 
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136021_wt')
-    train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/138181_wt')
+    # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/138181_wt')
     # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135968_wt_at')
     # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
-    train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
+    # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
 
     batch_size = 20
     epochs = 350
