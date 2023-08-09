@@ -16,15 +16,22 @@ class PclMLP(nn.Module):
 
         self.backbone_pcl = PclBackbone().float()
 
-        self.lstm_input = 158400+64
-        self.hidden_state_dim = 1024
-        self.num_layers = 4
-
-        self.rnn = nn.RNN(self.lstm_input, self.hidden_state_dim, self.num_layers, nonlinearity='relu',batch_first=True)
+        self.featur_ext = nn.Sequential(
+            nn.Linear(158400,2048),
+            nn.ELU(),
+            nn.Linear(2048,1024),
+            nn.ELU()                                             
+        )
 
         self.after_rnn = nn.Sequential(
-            nn.Linear(1024,512),
+            nn.Linear(1024+64,512),
             nn.ELU()                              
+        )        
+
+        self.featt_util = nn.Sequential(
+            nn.Linear(158400,1024),
+            nn.ELU(),
+            nn.Linear(1024,22)                                          
         )        
 
         self.predict = nn.Linear(512,22)            
@@ -34,25 +41,20 @@ class PclMLP(nn.Module):
 
     def forward(self, input, goal):
         
-        # batch_size = input.size()[0]
-
-        h0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim, device='cuda')
-        # c0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim,device='cuda')
 
         point_cloud_feat = self.backbone_pcl(input.float())        
         goal = self.goal_encoder(goal)            
         
-        pcl_goal_concat = torch.cat([point_cloud_feat, goal],dim=-1)
+
+        rnn_out = self.featur_ext(point_cloud_feat)
+
+        rnn_goal = torch.cat([rnn_out, goal],dim=-1)
+
+        final_feat = self.after_rnn(rnn_goal)
         
-        pcl_goal_concat = pcl_goal_concat.unsqueeze(0)
+        prediction = self.predict(final_feat)
 
-        rnn_out, _ = self.rnn(pcl_goal_concat, h0)
-
-        rnn_out = rnn_out.squeeze(0)
-
-        final_feat = self.after_rnn(rnn_out)
-
-        prediction = self.predict(final_feat)                
+        # utility = self.featt_util(point_cloud_feat)
 
         return rnn_out, prediction
 

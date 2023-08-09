@@ -25,7 +25,7 @@ experiment = Experiment(
     workspace="bhabaranjan",
 )
 
-experiment.add_tag('angler-bc')
+experiment.add_tag('transformer-angler-bc')
 experiment.log_asset('/scratch/bpanigr/fusion-network/scripts/model_builder/multimodal/multi_net.py')
 
 coloredlogs.install()
@@ -42,7 +42,7 @@ val_dict = {}
 # model_storage_path = '/home/ranjan/Workspace/my_works/fusion-network/scripts'
 
 root_path = '/scratch/bpanigr/fusion-network/recorded-data'
-model_storage_path = '/home/bpanigr/Workspace/lin_angler_model'
+model_storage_path = '/scratch/bpanigr/model_weights/transformer'
 
 def get_loss_fun(loss_type = None):
     if loss_type == 'mse':
@@ -73,12 +73,12 @@ def get_loss_prev(loss_fn, lin_vel, angular_vel, gt_lin, gt_angular, data_src):
     return error
 
 def get_loss(loss_fn, pts, gt_pts, data_src):
-    error =  loss_fn(pts, gt_pts)     
-    
+    l2 = torch.nn.MSELoss()
+    error =  None
     if data_src == 'validation':     
-        experiment.log_metric(name = str('way_pts'+data_src), value= error.item())    
+        error = loss_fn(pts, gt_pts)
     else:
-        experiment.log_metric(name = str('way_pts'+data_src), value=error.item())      
+        error = (0.99 * loss_fn(pts, gt_pts) )+ (0.01 * l2(pts, gt_pts)) 
     return error
 
 
@@ -130,7 +130,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/angler_only_multi_modal_velocities_{epoch+1}.pth')
+            }, f'{model_storage_path}/multi_modal_anglular_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
@@ -141,17 +141,19 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     model = MultiModalNet()    
 
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr=0.00000188)     
+    optim = torch.optim.Adam(model.parameters(), lr =0.000008 )     
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    # ckpt = torch.load('/scratch/bpanigr/fusion-network/way_latest_model_at_40_2.343480117061302.pth')
+    # ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/angler_only_multi_modal_velocities_60.pth')
     # model.load_state_dict(ckpt['model_state_dict'])
+    # optim.load_state_dict(ckpt['optimizer_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
-    scheduler = MultiStepLR(optim, milestones= [30,70,130], gamma=.75)
+    scheduler = MultiStepLR(optim, milestones= [30,70,100,155], gamma=0.90)
 
     data_dict = {}
+    # optim.param_groups[0]['lr'] = 0.00000688
     for epoch in range(num_epochs):
         num_files = 0
         lr = scheduler.get_last_lr()        
@@ -241,11 +243,11 @@ def main():
 
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136021_wt')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/138181_wt')
-    train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135968_wt_at')
-    train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
+    # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135968_wt_at')
+    # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
 
-    batch_size = 24
+    batch_size = 10
     epochs = 350
     run_training(train_dirs, val_dirs, batch_size, epochs)
 
