@@ -130,7 +130,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/multi_modal_anglular_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/multi_modal_anglular_at10_velocities_{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
@@ -145,12 +145,12 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/multi_modal_anglular_velocities_40_0.1101583533075892.pth')
-    model.load_state_dict(ckpt['model_state_dict'])
+    # ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/multi_modal_anglular_velocities_40_0.1101583533075892.pth')
+    # model.load_state_dict(ckpt['model_state_dict'])
     # optim.load_state_dict(ckpt['optimizer_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
-    scheduler = MultiStepLR(optim, milestones= [20,60,100,155], gamma=0.80)
+    scheduler = MultiStepLR(optim, milestones= [40,70,100,155], gamma=0.75)
 
     data_dict = {}
     # optim.param_groups[0]['lr'] = 0.00000688
@@ -247,7 +247,7 @@ def main():
     # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
 
-    batch_size = 10
+    batch_size = 20
     epochs = 350
     run_training(train_dirs, val_dirs, batch_size, epochs)
 
