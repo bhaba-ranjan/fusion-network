@@ -24,11 +24,11 @@ class MultiModalNet(nn.Module):
         self.pcl =  PclMLP()
         self.transformer = CustomTransformerModel()
 
-        self.pcl_weights = torch_load_weights('/scratch/bpanigr/fusion-network/tf_pcl_full_ann_utility_sep_60_0.08008522029000217.pth')
-        self.image_weights = torch_load_weights('/scratch/bpanigr/model_weights/image/image_model_60_0.08670703555086381.pth')
+        # self.pcl_weights = torch_load_weights('/scratch/bpanigr/fusion-network/tf_pcl_full_ann_utility_sep_70_0.07738654711255934.pth')
+        # self.image_weights = torch_load_weights('/scratch/bpanigr/model_weights/image/image_model_60_0.08670703555086381.pth')
         
-        self.image.load_state_dict(self.image_weights, strict=False)
-        self.pcl.load_state_dict(self.pcl_weights, strict=False)
+        # self.image.load_state_dict(self.image_weights, strict=False)
+        # self.pcl.load_state_dict(self.pcl_weights, strict=False)
 
         set_trainable_false(self.image)
         set_trainable_false(self.pcl)

@@ -73,12 +73,12 @@ def get_loss_prev(loss_fn, lin_vel, angular_vel, gt_lin, gt_angular, data_src):
     return error
 
 def get_loss(loss_fn, pts, gt_pts, data_src):
-    l2 = torch.nn.MSELoss()
+    # l2 = torch.nn.MSELoss()
     error =  None
     if data_src == 'validation':     
         error = loss_fn(pts, gt_pts)
     else:
-        error = (0.99 * loss_fn(pts, gt_pts) )+ (0.01 * l2(pts, gt_pts)) 
+        error = loss_fn(pts, gt_pts)
     return error
 
 
@@ -141,16 +141,16 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     model = MultiModalNet()    
 
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr =0.000008 )     
+    optim = torch.optim.Adam(model.parameters(), lr =0.0000086 )     
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    # ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/angler_only_multi_modal_velocities_60.pth')
-    # model.load_state_dict(ckpt['model_state_dict'])
+    ckpt = torch.load('/scratch/bpanigr/model_weights/transformer/multi_modal_anglular_velocities_40_0.1101583533075892.pth')
+    model.load_state_dict(ckpt['model_state_dict'])
     # optim.load_state_dict(ckpt['optimizer_state_dict'])
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
-    scheduler = MultiStepLR(optim, milestones= [30,70,100,155], gamma=0.90)
+    scheduler = MultiStepLR(optim, milestones= [20,60,100,155], gamma=0.80)
 
     data_dict = {}
     # optim.param_groups[0]['lr'] = 0.00000688
