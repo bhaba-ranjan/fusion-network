@@ -50,24 +50,15 @@ class ApplyTransformation(Dataset):
     def __getitem__(self, _):
         self.image = self.input_data['images']
         self.point_clouds = self.input_data['pcl']
-        self.way_pts = self.input_data['local_goal']        
-        self.robot_position  = self.input_data['robot_pos']
+        self.local_goal = self.input_data['local_goal']        
 
         images = [ self.image_transforms(self.image)]
         stacked_images = torch.cat(images, dim=0)
         
-        
-        # Transform local goal into robot frame
-        tf_matrix = get_transformation_matrix(self.robot_position[0],self.robot_position[1])     
-        tf_inverse = np.linalg.pinv(tf_matrix)
 
-        goals = np.concatenate([ np.array(self.way_pts), np.ones((12,1))], axis=1).transpose()
-
-        all_pts = np.matmul(tf_inverse, goals) * get_gaussian_weights(6,3)
-
+        goals = np.concatenate([ [np.array(self.local_goal)], np.ones((1,1))], axis=1).transpose()
+        all_pts =  goals * get_gaussian_weights(6,3)[:,-1]
         all_pts = all_pts[:2, :]
-
-        way_pts = all_pts[:, :-1]
         local_goal = all_pts[:, -1]
 
 
@@ -77,4 +68,4 @@ class ApplyTransformation(Dataset):
 
         local_goal = torch.tensor(local_goal, dtype=torch.float32).ravel()        
 
-        return (stacked_images, point_clouds, local_goal, way_pts)
+        return (stacked_images, point_clouds, local_goal)

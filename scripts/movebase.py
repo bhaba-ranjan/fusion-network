@@ -18,10 +18,11 @@ class Robot_config():
         self.gx = 0 # body frame
         self.gy = 0
         self.gp = 0
-        self.los = 3
+        self.los = 5
         # self.los = 5
     
     def get_robot_status(self, msg):
+        # print(msg)
         q1 = msg.pose.pose.orientation.x
         q2 = msg.pose.pose.orientation.y
         q3 = msg.pose.pose.orientation.z
@@ -32,7 +33,7 @@ class Robot_config():
         #print(self.X, self.Y, self.PSI)
     
     def get_global_path(self, msg):
-        #print(msg.poses)
+        # print(msg.poses)
         # self.global_path = []
         gp = []
         for pose in msg.poses:
@@ -96,26 +97,31 @@ if __name__ == '__main__':
         lg_y = 0
         #else:
         if len(gp)>0:
-            lg_flag = 0
+            lg_flag = 1
             for wp in gp:
                 dist = (np.array(wp)-np.array([X, Y]))**2
                 dist = np.sum(dist, axis=0)
-                dist = np.sqrt(dist)
+                dist = np.sqrt(dist)             
+                # print(f'local_goal Distance: {dist}')   
                 if dist > los:
+                    print(f'published ------------ Distance: {np.random.randint(0,20)} {np.random.randint(30,40)}')
                     lg_flag = 1
                     lg = transform_lg(wp, X, Y, PSI)
                     lg_x = lg[0]
                     lg_y = lg[1]
+                    local_goal = Pose()
+                    local_goal.position.x = lg_x
+                    local_goal.position.y = lg_y
+                    local_goal.orientation.w = 1
+                    # print(local_goal)
+                    pub_lg.publish(local_goal)
                     break
+
             if lg_flag == 0:
                 lg = transform_lg(gp[-1], X, Y, PSI)
                 lg_x = lg[0]
                 lg_y = lg[1]
                 
         # print(lg_x, lg_y)
-        local_goal = Pose()
-        local_goal.position.x = lg_x
-        local_goal.position.y = lg_y
-        local_goal.orientation.w = 1
-        pub_lg.publish(local_goal)
+        
         

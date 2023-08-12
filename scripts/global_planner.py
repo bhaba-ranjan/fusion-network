@@ -22,24 +22,25 @@ import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
 from model_builder.pcl.pcl_head import PclMLP
+# from model_builder.image.image_head import ImageHeadMLP
+from model_builder.multimodal.multi_net import MultiModalNet
 from transformer import ApplyTransformation
 from data_builder.gaussian_weights import get_gaussian_weights
 
 
-device = "cuda:1" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f'Using device ========================================>  {device}')
 
 weights_base = get_gaussian_weights(6,3)[:,:-1] 
-# print(weights_base)
 weights = np.concatenate([weights_base, weights_base], axis=1)
-# weights = torch.tensor(weights)
-# weights = weights.to(device)
+weights = torch.tensor(weights)
+weights = weights.to(device)
 
 
-model = PclMLP()
+model = MultiModalNet()
 model.to(device)
-ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/scripts/pcl_backbone_changed_model_at_100_0.08454692389459491.pth')
+ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/angler_only_multi_modal_velocities_120.pth')
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 
@@ -48,6 +49,7 @@ path = '/home/ranjan/Workspace/my_works/fusion-network/recorded-data/val/138258_
 
 with open(path, 'rb') as data:
     content = pickle.load(data)
+
 v = 'local_goal'
 
 
@@ -74,7 +76,6 @@ def marker_callback(xs, ys):
     marker.header.frame_id='base_link'
     marker.type = Marker.LINE_STRIP
     marker.action = Marker.ADD
-    # marker.lifetime = rospy.Duration(1)
     marker.scale.x = 0.02
     marker.color.a = 1.0
     marker.color.r = 1
@@ -129,15 +130,9 @@ def get_goals(pts, way_pts):
     goals = pts.detach().cpu().numpy()[0]
 
     way_pts = way_pts / weights_base
-    goals = goals / weights
 
-    
-
-    x = goals[0, :11]
-    y = goals[0, 11:]
-
-    print(f'x : {x.shape}')
-    print(f'y : {y.shape}')
+    x = goals[:11]
+    y = goals[11:]
 
     wx = way_pts[0,:]
     wy = way_pts[1,:]
@@ -184,23 +179,25 @@ def aprrox_sync_callback(lidar, rgb, odom):
 
         align_content = {
             "pcl": point_cloud,
-            "images": [img],
+            "images": img,
             "local_goal": content[counter['index']]['local_goal'],
             "robot_pos": (robot_position, robot_orientation)
         }
 
         transformer = ApplyTransformation(align_content)
         # print("transformed")
-        pcl, local_goal, way_pts = transformer.__getitem__(0)
-        pcl = pcl.to(device)        
+        image, pcl, local_goal, way_pts = transformer.__getitem__(0)
+        pcl = pcl.to(device) 
+        image = image.to(device)      
+        image = image.unsqueeze(0)
         local_goal = local_goal.to(device)
         pcl = pcl.unsqueeze(0)
         local_goal = local_goal.unsqueeze(0)
         with torch.no_grad():
             # print("in")
-            pts = model(pcl,local_goal)
+            _, pts = model(image,pcl,local_goal)
             # print("out")
-            get_goals(pts, way_pts)
+            get_goals(pts/weights, way_pts)
             counter['index'] += 1
             print(counter['index'])            
             counter['sub-sampler'] = 0
@@ -223,10 +220,6 @@ pub_gt = rospy.Publisher('/world_point_gt', Marker, queue_size=10)
 ts = message_filters.ApproximateTimeSynchronizer([lidar, rgb, odom], 100, 0.05, allow_headerless=True)
 ts.registerCallback(aprrox_sync_callback)
 
-# odom.registerCallback(odom_callback)
-
 
 
 rospy.spin()
-
-
