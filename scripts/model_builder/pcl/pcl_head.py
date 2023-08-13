@@ -43,6 +43,12 @@ class PclMLP(nn.Module):
         goal = self.goal_encoder(goal)            
         
         pcl_goal_concat = torch.cat([point_cloud_feat, goal],dim=-1)
+
+        point_cloud_feat.detach()
+        
+        goal.detach()
+        del point_cloud_feat, goal
+        torch.cuda.empty_cache()
         
         pcl_goal_concat = pcl_goal_concat.unsqueeze(0)
 

@@ -62,14 +62,26 @@ class MultiModalNet(nn.Module):
 
         backbone_feats = torch.cat([rnn_pcl_out, rnn_img_out], dim=-1)
         fustion_features = self.modality_fusion_layer(backbone_feats)        
-        
+        rnn_img_out.detach()
+        rnn_pcl_out.detach()
+        backbone_feats.detach()
+        del rnn_img_out, rnn_pcl_out, backbone_feats
+        torch.cuda.empty_cache()
 
         second_layer_features = torch.cat([final_pcl_feat,final_img_feat], dim=-1)
         global_path_encoding = self.global_path_fusion(second_layer_features)
-        
+        final_img_feat.detach()
+        # final_pcl_feat.detach()
+        second_layer_features.detach()
+        del final_img_feat, second_layer_features 
+        torch.cuda.empty_cache()
 
         final_features_concat = torch.cat([global_path_encoding,fustion_features], dim=-1).unsqueeze(0)
-        
+        global_path_encoding.detach()
+        fustion_features.detach()
+        del global_path_encoding, fustion_features
+        torch.cuda.empty_cache()
+
         final_feat = self.transformer(final_features_concat)        
 
         final_feat = final_feat.squeeze(0)

@@ -47,8 +47,25 @@ class PclBackbone(nn.Module):
         feat_shared = self.common(input)
 
         feat_l1 = self.ft1(feat_shared)
+
+        feat_shared.detach()
+        feat_shared.detach()        
+        del feat_shared
+        torch.cuda.empty_cache()
+
         feat_l2 = self.ft2(feat_l1)
+
+        feat_l1.detach()
+        feat_l1.detach()        
+        del feat_l1
+        torch.cuda.empty_cache()
+
         feat_l3 = self.ft3(feat_l2)
+
+        feat_l2.detach()
+        feat_l2.detach()        
+        del feat_l2
+        torch.cuda.empty_cache()
 
         # feat_l1 = feat_l1.contiguous().view(batchsize, -1)
         # feat_l2 = feat_l2.contiguous().view(batchsize, -1)

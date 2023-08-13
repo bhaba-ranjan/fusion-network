@@ -35,7 +35,7 @@ weights = weights.to(device)
 
 model = MultiModalNet()
 model.to(device)
-ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/angler_only_multi_modal_velocities_120.pth')
+ckpt = torch.load('/home/administrator/Workspace_Ranjan/fusion-network/scripts/angler_only_multi_modal_velocities_120.pth')
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 print('model_loaded')
@@ -105,7 +105,7 @@ def publish_cmd_vel(cmd_vel):
     cmd_msg = Twist()
     cmd_msg.linear.x = 0.3
     cmd_msg.angular.z = cmd_vel[0]
-    cmd_publisher.publish(cmd_msg)    
+    # cmd_publisher.publish(cmd_msg)    
 
 def aprrox_sync_callback(lidar, rgb):
 
@@ -137,8 +137,17 @@ def aprrox_sync_callback(lidar, rgb):
         local_goal = local_goal.unsqueeze(0)
 
         with torch.no_grad():
-            # print("inference")
+            start = rospy.Time().now().to_sec()
             cmd, pts = model(image, pcl, local_goal)
+            
+            image.detach()
+            pcl.detach()
+            local_goal.detach()
+            del image, pcl, local_goal
+            torch.cuda.empty_cache()
+            
+            end = rospy.Time().now().to_sec()
+            print(f'diff: {end-start}')
             # print("out")
             get_goals(pts/weights)
             publish_cmd_vel(cmd)
