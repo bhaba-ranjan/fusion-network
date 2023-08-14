@@ -46,10 +46,6 @@ class PclMLP(nn.Module):
 
         point_cloud_feat.detach()
         
-        goal.detach()
-        del point_cloud_feat, goal
-        torch.cuda.empty_cache()
-        
         pcl_goal_concat = pcl_goal_concat.unsqueeze(0)
 
         rnn_out, _ = self.rnn(pcl_goal_concat, h0)

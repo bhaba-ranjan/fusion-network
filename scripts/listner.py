@@ -24,7 +24,7 @@ from data_builder.gaussian_weights import get_gaussian_weights
 from data_builder.cmd_scaler import transform_to_gt_scale
 
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu" if torch.cuda.is_available() else "cpu"
 
 print(f'Using device ========================================>  {device}')
 
@@ -35,7 +35,7 @@ weights = weights.to(device)
 
 model = MultiModalNet()
 model.to(device)
-ckpt = torch.load('/home/administrator/Workspace_Ranjan/fusion-network/scripts/angler_only_multi_modal_velocities_120.pth')
+ckpt = torch.load('/home/administrator/Workspace_Ranjan/fusion-network/scripts/angler_only_multi_modal_velocities_120.pth',map_location=device)
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 print('model_loaded')
@@ -105,11 +105,11 @@ def publish_cmd_vel(cmd_vel):
     cmd_msg = Twist()
     cmd_msg.linear.x = 0.3
     cmd_msg.angular.z = cmd_vel[0]
-    # cmd_publisher.publish(cmd_msg)    
+    cmd_publisher.publish(cmd_msg)    
 
 def aprrox_sync_callback(lidar, rgb):
 
-    if counter['sub-sampler'] % 2 == 0:
+    if counter['sub-sampler'] % 1 == 0:
         # TODO: these 4 values will be pickled at index counter['index'] except image
         img = read_image(rgb)
         point_cloud = get_lidar_points(lidar)
@@ -123,6 +123,8 @@ def aprrox_sync_callback(lidar, rgb):
             "images": img,
             "local_goal": constant_goal,
         }
+        
+        start = rospy.Time().now().to_sec()
 
         transformer = ApplyTransformation(align_content)
         # print("transformed")
@@ -137,7 +139,7 @@ def aprrox_sync_callback(lidar, rgb):
         local_goal = local_goal.unsqueeze(0)
 
         with torch.no_grad():
-            start = rospy.Time().now().to_sec()
+            
             cmd, pts = model(image, pcl, local_goal)
             
             image.detach()

@@ -6,6 +6,8 @@ from ..pcl.pcl_head import PclMLP
 from ..image.image_head import ImageHeadMLP
 from .tf_model import CustomTransformerModel
 
+load = True
+
 def set_trainable_false(model):
     for param in model.parameters():
         param.requires_grad = False    
@@ -55,32 +57,33 @@ class MultiModalNet(nn.Module):
         self.predict = nn.Linear(512,1)
 
     def forward(self, stacked_images, pcl, local_goal):
-        
+        global load
+        if load == True:
+            self.image = self.image.to('cuda')
+            self.pcl = self.pcl.to('cuda')
+            load = False
+
+        pcl = pcl.to('cuda') 
+        stacked_images = stacked_images.to('cuda')      
+        local_goal = local_goal.to('cuda')
 
         rnn_img_out, final_img_feat = self.image(stacked_images, local_goal)
         rnn_pcl_out, final_pcl_feat = self.pcl(pcl, local_goal)
 
+        rnn_img_out = rnn_img_out.to('cpu')  
+        rnn_pcl_out = rnn_pcl_out.to('cpu')
+        final_img_feat = final_img_feat.to('cpu')
+        final_pcl_feat = final_pcl_feat.to('cpu')
+
         backbone_feats = torch.cat([rnn_pcl_out, rnn_img_out], dim=-1)
         fustion_features = self.modality_fusion_layer(backbone_feats)        
-        rnn_img_out.detach()
-        rnn_pcl_out.detach()
-        backbone_feats.detach()
-        del rnn_img_out, rnn_pcl_out, backbone_feats
-        torch.cuda.empty_cache()
+
 
         second_layer_features = torch.cat([final_pcl_feat,final_img_feat], dim=-1)
         global_path_encoding = self.global_path_fusion(second_layer_features)
-        final_img_feat.detach()
-        # final_pcl_feat.detach()
-        second_layer_features.detach()
-        del final_img_feat, second_layer_features 
-        torch.cuda.empty_cache()
+
 
         final_features_concat = torch.cat([global_path_encoding,fustion_features], dim=-1).unsqueeze(0)
-        global_path_encoding.detach()
-        fustion_features.detach()
-        del global_path_encoding, fustion_features
-        torch.cuda.empty_cache()
 
         final_feat = self.transformer(final_features_concat)        
 
