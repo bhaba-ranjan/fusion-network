@@ -165,7 +165,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     loss = torch.nn.L1Loss()
     model = PclMLP()
     model.to(device)
-    optim = torch.optim.Adam(model.parameters(), lr=0.0000098)     
+    optim = torch.optim.Adam(model.parameters(), lr=0.00000888)     
     
     # run_validation(val_dirs, model, batch_size, 2, optim)  
     # ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/scripts/pre_img_way_pts_model_at_110.pth')
@@ -174,7 +174,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # return
     # run_validation(val_dirs, model, batch_size, 0, optim)
     
-    scheduler = MultiStepLR(optim, milestones= [30,50,80], gamma=.8)
+    scheduler = MultiStepLR(optim, milestones= [30,80,130,180,230,300], gamma=.75)
 
     data_dict = {}
     for epoch in range(num_epochs):
