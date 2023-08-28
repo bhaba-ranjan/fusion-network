@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from ..image.backbone import make_mlp
 from .pointnet_backbone import PclBackbone
+from .tf_pcl import CustomTransformerModelPcl
 
 
 
@@ -15,6 +16,8 @@ class PclMLP(nn.Module):
         super().__init__()
 
         self.backbone_pcl = PclBackbone().float()
+        self.pcl_transformer = CustomTransformerModelPcl()
+        self.goal_encoder = make_mlp( [2, 128, 64], 'relu', False, False, 0.0)
 
         self.lstm_input = 158400+64
         self.hidden_state_dim = 1024
@@ -27,14 +30,24 @@ class PclMLP(nn.Module):
             nn.ELU()                              
         )        
 
-        self.predict = nn.Linear(512,22)            
+        self.predict_path = nn.Linear(512,8)            
 
-        self.goal_encoder = make_mlp( [2, 128, 64], 'relu', False, False, 0.0)
+        self.predict_path_encoder = nn.Sequential(
+            nn.Linear(8, 256),
+            nn.ELU(),
+            nn.Linear(256,128),
+            nn.ELU()                            
+        )        
+
+        self.predict_vel = nn.Sequential(
+            nn.Linear(1024+128, 512),
+            nn.ELU(),
+            nn.Linear(512,2)
+        )
+        
                 
 
     def forward(self, input, goal):
-        
-        # batch_size = input.size()[0]
 
         h0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim, device='cuda')
         # c0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim,device='cuda')
@@ -54,9 +67,19 @@ class PclMLP(nn.Module):
 
         final_feat = self.after_rnn(rnn_out)
 
-        prediction = self.predict(final_feat)                
+        prediction_path = self.predict_path(final_feat)                
 
-        return rnn_out, prediction
+        encoded_path = self.predict_path_encoder(prediction_path)
+
+        tf_input = torch.cat([rnn_out, encoded_path],dim=-1).unsqueeze(0)
+        
+        tf_out = self.pcl_transformer(tf_input)
+
+        tf_out = tf_out.squeeze(0)
+
+        predicted_vel = self.predict_vel(tf_out)
+
+        return rnn_out, prediction_path, predicted_vel
 
 
 

@@ -66,11 +66,11 @@ class ApplyTransformation(Dataset):
         goals = np.concatenate([ np.array(self.way_pts), np.ones((12,1))], axis=1).transpose()
         
 
-        all_pts = np.matmul(tf_inverse, goals) * get_gaussian_weights(6,3)
+        all_pts = np.matmul(tf_inverse, goals) * get_gaussian_weights(2,1.3)
         all_pts = all_pts[:2, :]
 
-        way_pts = all_pts[:, :-1]
-        local_goal = all_pts[:, -1]
+        way_pts = all_pts[:, :4]
+        local_goal = all_pts[:, 4]
 
         # print(f'{all_pts/150}')
         # print(f'{local_goal}')
@@ -78,9 +78,9 @@ class ApplyTransformation(Dataset):
         point_clouds = np.array(self.point_clouds[0])   
         point_clouds = get_voxelized_points(point_clouds)
 
-        gt_cmd_vel = np.array([self.gt_cmd_vel[2]])
+        gt_cmd_vel = np.array([self.gt_cmd_vel[0], self.gt_cmd_vel[2]])
         gt_cmd_vel = np.around(gt_cmd_vel,2)
-        gt_cmd_vel = np.expand_dims(gt_cmd_vel, axis=0)        
+        gt_cmd_vel = np.expand_dims(gt_cmd_vel, axis=0)
         gt_cmd_vel = transform_cmd_vel(gt_cmd_vel)
 
         gt_pts = torch.tensor(way_pts, dtype=torch.float32).ravel()
