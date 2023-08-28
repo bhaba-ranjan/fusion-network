@@ -5,6 +5,8 @@ import torch.nn as nn
 from ..pcl.pcl_head import PclMLP
 from ..image.image_head import ImageHeadMLP
 from .tf_model import CustomTransformerModel
+from .tf_img import CustomTransformerModelImg
+from .tf_pcl import CustomTransformerModelPcl
 from ..image.backbone import make_mlp
 
 def set_trainable_false(model):
@@ -24,19 +26,17 @@ class MultiModalNet(nn.Module):
         self.image =  ImageHeadMLP()        
         self.pcl =  PclMLP()
         self.transformer = CustomTransformerModel()
-
-
-        self.modality_fusion_layer = nn.Sequential(
-            nn.Linear(1024+512,2304),
-            nn.ELU(),
-            nn.Linear(2304,1024),
-            nn.ELU()
-        )
-
+        self.transformer_img = CustomTransformerModelImg()
+        self.transformer_pcl = CustomTransformerModelPcl()
         self.goal_encoder = make_mlp( [2, 128, 64], 'relu', False, False, 0.0)
 
+        self.multimodal_feat_compress = nn.Sequential(
+            nn.Linear(256+512+64,1024),
+            nn.ELU()           
+        )        
+
         self.global_path_predictor = nn.Sequential(
-            nn.Linear(1024+64, 512),
+            nn.Linear(1024, 512),
             nn.ELU(),
             nn.Linear(512,8),            
         )
@@ -65,31 +65,36 @@ class MultiModalNet(nn.Module):
     def forward(self, stacked_images, pcl, local_goal):
         
 
-        rnn_img_out, img_path, img_vel = self.image(stacked_images, local_goal)
-        rnn_pcl_out, pcl_path, pcl_vel = self.pcl(pcl, local_goal)
+        rnn_img_out = self.image(stacked_images, local_goal)
+        rnn_pcl_out = self.pcl(pcl, local_goal)
 
-        backbone_feats = torch.cat([rnn_pcl_out, rnn_img_out], dim=-1)
-        fustion_features = self.modality_fusion_layer(backbone_feats)        
-        
+        rnn_img_input = rnn_img_out.unsqueeze(0)
+        rnn_pcl_input = rnn_pcl_out.unsqueeze(0)
+
+        tf_img_out = self.transformer_img(rnn_img_input)
+        tf_pcl_out = self.transformer_pcl(rnn_pcl_input)
+
+        tf_img_out = tf_img_out.squeeze(0)
+        tf_pcl_out = tf_pcl_out.squeeze(0)
+
         encoded_goal = self.goal_encoder(local_goal)
 
-        fsn_global_path_feats = torch.cat([fustion_features, encoded_goal], dim=-1)
-        fsn_global_path = self.global_path_predictor(fsn_global_path_feats)
+        fsn_feat_with_lc_goal = torch.cat([tf_img_out, tf_pcl_out, encoded_goal], dim=-1).unsqueeze(0)
+        tf_multimodal_out = self.transformer(fsn_feat_with_lc_goal)
+
+        tf_multimodal_out = tf_multimodal_out.squeeze(0)
+
+        multimodal_feat_reduced = self.multimodal_feat_compress(tf_multimodal_out)
+
+        fsn_global_path = self.global_path_predictor(multimodal_feat_reduced)
 
         encoded_global_path = self.global_path_encoder(fsn_global_path)
-
-        # second_layer_features = torch.cat([final_pcl_feat,final_img_feat], dim=-1)
-        # global_path_encoding = self.global_path_fusion(second_layer_features)
         
 
-        final_features_concat = torch.cat([fustion_features, encoded_global_path], dim=-1).unsqueeze(0)
-        
-        final_feat = self.transformer(final_features_concat)        
-
-        final_feat = final_feat.squeeze(0)
-        
-        fustion_perception_path = self.joint_perception_path_feautres(final_feat)
+        final_features_concat = torch.cat([multimodal_feat_reduced, encoded_global_path], dim=-1)
+                
+        fustion_perception_path = self.joint_perception_path_feautres(final_features_concat)
 
         fusion_vel = self.predict_vel(fustion_perception_path)
 
-        return fsn_global_path, fusion_vel, img_path, img_vel, pcl_path, pcl_vel
+        return fsn_global_path, fusion_vel

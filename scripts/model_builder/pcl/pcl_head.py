@@ -28,29 +28,13 @@ class PclMLP(nn.Module):
         self.after_rnn = nn.Sequential(
             nn.Linear(1024,512),
             nn.ELU()                              
-        )        
-
-        self.predict_path = nn.Linear(512,8)            
-
-        self.predict_path_encoder = nn.Sequential(
-            nn.Linear(8, 256),
-            nn.ELU(),
-            nn.Linear(256,128),
-            nn.ELU()                            
-        )        
-
-        self.predict_vel = nn.Sequential(
-            nn.Linear(1024+128, 512),
-            nn.ELU(),
-            nn.Linear(512,2)
-        )
+        )     
         
                 
 
     def forward(self, input, goal):
 
         h0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim, device='cuda')
-        # c0 = torch.zeros(self.num_layers, 1, self.hidden_state_dim,device='cuda')
 
         point_cloud_feat = self.backbone_pcl(input.float())        
         goal = self.goal_encoder(goal)            
@@ -65,19 +49,7 @@ class PclMLP(nn.Module):
 
         final_feat = self.after_rnn(rnn_out)
 
-        prediction_path = self.predict_path(final_feat)                
-
-        encoded_path = self.predict_path_encoder(prediction_path)
-
-        tf_input = torch.cat([rnn_out, encoded_path],dim=-1).unsqueeze(0)
-        
-        tf_out = self.pcl_transformer(tf_input)
-
-        tf_out = tf_out.squeeze(0)
-
-        predicted_vel = self.predict_vel(tf_out)
-
-        return rnn_out, prediction_path, predicted_vel
+        return final_feat
 
 
 
