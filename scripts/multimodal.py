@@ -107,14 +107,13 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             per_file_loss_pcl_cmd = []
             for index, (stacked_images, pcl ,local_goal, gt_pts, gt_cmd) in tqdm(enumerate(val_loader)):
                 pcl = pcl.to(device)
-                # pcl = pcl.to(device)
                 local_goal= local_goal.to(device)
-                
+                stacked_images = stacked_images.to(device)
+
                 gt_pts= gt_pts.to(device)
                 gt_cmd= gt_cmd.to(device)
                 
-                pts, vel = model(pcl, local_goal)
-
+                pts, vel = model(stacked_images, pcl, local_goal)
                                 
                 vel = transform_to_gt_scale(vel, device)                
                 gt_cmd = transform_to_gt_scale(gt_cmd, device)  
