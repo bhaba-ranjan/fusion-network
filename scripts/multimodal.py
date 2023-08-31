@@ -129,7 +129,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 error_pcl_path = get_loss(loss, pcl_path/ weights, gt_pts/ weights, 'validation')
                 
 
-                error_total = ( 0.8 * error_fusion_path) + fusion_vel + ( 0.9 * error_img_path) + error_img_cmd + ( 0.8 * error_pcl_path) + error_pcl_cmd
+                error_total =  error_fusion_path + fusion_vel + error_img_path + error_img_cmd + error_pcl_path + error_pcl_cmd
 
 
                 loss_path_fsn.append(error_fusion_path.item())
@@ -235,7 +235,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
                 error_pcl_cmd = get_loss(loss, pcl_vel, gt_cmd_vel, 'train_pcl')
 
                 
-                error_total = error_fusion_path + error_fusion_cmd + error_img_path + erro_img_cmd + error_pcl_path + error_pcl_cmd
+                error_total = (0.7 * error_fusion_path) + error_fusion_cmd + (0.85 * error_img_path) + erro_img_cmd + (0.7 * error_pcl_path) + error_pcl_cmd
 
                 
                 loss_path_fsn.append(error_fusion_path.item())
