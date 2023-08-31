@@ -158,12 +158,12 @@ def run_validation(val_files, model, batch_size, epoch, optim):
         
         avg_loss_on_validation = np.average(running_error)
         # print(f'epoch:------>{epoch}')
-        if (epoch+1) % 10 == 0 and (epoch+1) > 30:
+        if (epoch+1) % 10 == 0 and (epoch+1) > 20:
             print(f"saving model weights at validation error {avg_loss_on_validation}")
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/tf8_img_changed{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/tf8_img_anlronly_changed{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
