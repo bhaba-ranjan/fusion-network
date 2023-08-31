@@ -129,7 +129,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 error_pcl_path = get_loss(loss, pcl_path/ weights, gt_pts/ weights, 'validation')
                 
 
-                error_total = error_fusion_path + fusion_vel + error_img_path + error_img_cmd + error_pcl_path + error_pcl_cmd
+                error_total = ( 0.8 * error_fusion_path) + fusion_vel + ( 0.9 * error_img_path) + error_img_cmd + ( 0.8 * error_pcl_path) + error_pcl_cmd
 
 
                 loss_path_fsn.append(error_fusion_path.item())
