@@ -42,7 +42,7 @@ class ImageHeadMLP(nn.Module):
         self.predict_vel = nn.Sequential(
             nn.Linear(512+128, 512),
             nn.ELU(),
-            nn.Linear(512,2)
+            nn.Linear(512,1)
         )
 
     def forward(self, input, goal):

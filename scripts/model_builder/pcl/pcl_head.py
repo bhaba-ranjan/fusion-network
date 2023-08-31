@@ -42,7 +42,7 @@ class PclMLP(nn.Module):
         self.predict_vel = nn.Sequential(
             nn.Linear(1024+128, 512),
             nn.ELU(),
-            nn.Linear(512,2)
+            nn.Linear(512,1)
         )
         
                 

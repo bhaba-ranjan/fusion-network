@@ -123,12 +123,12 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 vel = transform_to_gt_scale(vel, device)                
                 gt_cmd = transform_to_gt_scale(gt_cmd, device)  
 
-                # vel_anglr = vel[:,0]
-                # gt_anglr = gt_cmd[:,0]
+                vel_anglr = vel[:,0]
+                gt_anglr = gt_cmd[:,0]
 
 
 
-                # error_angler = get_loss(loss, vel_anglr, gt_anglr,'validation')
+                error_angler = get_loss(loss, vel_anglr, gt_anglr,'validation')
                 # print(pcl_lin)
                 # print(pcl_anglr)
  
@@ -146,10 +146,10 @@ def run_validation(val_files, model, batch_size, epoch, optim):
                 # per_file_loss_fusion.append(error_fusion.item())
                 # per_file_loss_ǐmage.append(error_img.item())
                 per_file_loss_pcl.append(error_pcl.item())  
-                per_file_loss_pcl_cmd.append(error_cmd_vel.item())                
+                per_file_loss_pcl_cmd.append(error_angler.item())                
                 # per_file_total_loss.append(error_total.item())
 
-            print(f'avg anglr loss:{np.average(per_file_loss_pcl_cmd)} ')
+            # print(f'avg anglr loss:{np.average(error_angler)} ')
 
             experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_pcl'), value=np.average(per_file_loss_pcl), epoch = epoch + 1)
             experiment.log_metric(name = str('val_'+val_file.split('/')[-1]+'_pcl_cmd'), value=np.average(per_file_loss_pcl_cmd), epoch = epoch + 1)
@@ -179,7 +179,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     optim = torch.optim.Adam(model.parameters(), lr=0.0000098)     
     
     # run_validation(val_dirs, model, batch_size, 2, optim)  
-    ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/scripts/tf8_end_to_end_velocities_160_0.9251317143167459.pth')
+    ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/scripts/tf8_img_changed120_1.2858695438967258.pth')
     model.load_state_dict(ckpt['model_state_dict'])
     run_validation(val_dirs, model, batch_size, 0, optim)
     return

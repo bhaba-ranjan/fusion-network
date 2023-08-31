@@ -178,7 +178,7 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
     # run_validation(val_dirs, model, batch_size, 0, optim)
     # return
     
-    # ckpt = torch.load('/scratch/bpanigr/model_weights/end-to-end/v2_end_to_end_velocities_100_0.642947574742124.pth')
+    # ckpt = torch.load('/home/ranjan/Workspace/my_works/fusion-network/scripts/tf8_img_changed100_1.5907784618893555.pth')
     # model.load_state_dict(ckpt['model_state_dict'])
     # optim.load_state_dict(ckpt['optimizer_state_dict'])
 
@@ -296,7 +296,7 @@ def main():
     # train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/136514_sw_wt_sc')
     train_dirs.remove('/scratch/bpanigr/fusion-network/recorded-data/train/135967_at')
 
-    batch_size = 80
+    batch_size = 20
     epochs = 450
     run_training(train_dirs, val_dirs, batch_size, epochs)
 
