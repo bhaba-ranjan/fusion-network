@@ -163,7 +163,7 @@ def run_validation(val_files, model, batch_size, epoch, optim):
             torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optim.state_dict(),
-            }, f'{model_storage_path}/tf8_img_anlronly_changed{epoch+1}_{avg_loss_on_validation}.pth')
+            }, f'{model_storage_path}/switch_changed{epoch+1}_{avg_loss_on_validation}.pth')
 
         print(f'=========================> Average Validation error is:   { avg_loss_on_validation } \n')
         return avg_loss_on_validation            
@@ -234,8 +234,14 @@ def run_training(train_files, val_dirs, batch_size, num_epochs):
                 error_pcl_path = get_loss(loss, pcl_path, gt_pts, 'train_pcl')
                 error_pcl_cmd = get_loss(loss, pcl_vel, gt_cmd_vel, 'train_pcl')
 
-                
-                error_total = (0.7 * error_fusion_path) + error_fusion_cmd + (0.85 * error_img_path) + erro_img_cmd + (0.7 * error_pcl_path) + error_pcl_cmd
+                fsn, img, pcl = [1,1,1]
+
+                if (epoch+1) > 18:
+                    fsn, img, pcl = [0.1 , 0.2 , 0.1]
+                    
+
+
+                error_total =  (fsn * error_fusion_path) + error_fusion_cmd + (img * error_img_path) + erro_img_cmd + (pcl * error_pcl_path) + error_pcl_cmd
 
                 
                 loss_path_fsn.append(error_fusion_path.item())
