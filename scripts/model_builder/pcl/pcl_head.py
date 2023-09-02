@@ -65,21 +65,21 @@ class PclMLP(nn.Module):
 
         rnn_out = rnn_out.squeeze(0)
 
-        final_feat = self.after_rnn(rnn_out)
+        # final_feat = self.after_rnn(rnn_out)
 
-        prediction_path = self.predict_path(final_feat)                
+        # prediction_path = self.predict_path(final_feat)                
 
-        encoded_path = self.predict_path_encoder(prediction_path)
+        # encoded_path = self.predict_path_encoder(prediction_path)
 
-        tf_input = torch.cat([rnn_out, encoded_path],dim=-1).unsqueeze(0)
+        # tf_input = torch.cat([rnn_out, encoded_path],dim=-1).unsqueeze(0)
         
-        tf_out = self.pcl_transformer(tf_input)
+        # tf_out = self.pcl_transformer(tf_input)
 
-        tf_out = tf_out.squeeze(0)
+        # tf_out = tf_out.squeeze(0)
 
-        predicted_vel = self.predict_vel(tf_out)
+        # predicted_vel = self.predict_vel(tf_out)
 
-        return rnn_out, prediction_path, predicted_vel
+        return rnn_out#, prediction_path, predicted_vel
 
 
 

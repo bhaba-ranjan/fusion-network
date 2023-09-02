@@ -28,14 +28,14 @@ device = "cpu" if torch.cuda.is_available() else "cpu"
 
 print(f'Using device ========================================>  {device}')
 
-weights_base = get_gaussian_weights(6,3)[:,:-1] 
+weights_base = get_gaussian_weights(6,3)[:,:4] 
 weights = np.concatenate([weights_base, weights_base], axis=1)
 weights = torch.tensor(weights)
-weights = weights.to(device)
+weights = weights.to('cuda')
 
 model = MultiModalNet()
 model.to(device)
-ckpt = torch.load('/home/administrator/Workspace_Ranjan/fusion-network/scripts/angler_only_multi_modal_velocities_120.pth',map_location=device)
+ckpt = torch.load('/home/administrator/Workspace_Ranjan/fusion-network/scripts/tf8_end_to_end_velocities_160_0.9251317143167459.pth',map_location=device)
 model.load_state_dict(ckpt['model_state_dict'])
 model.eval()
 print('model_loaded')
@@ -64,7 +64,7 @@ def marker_callback(xs, ys):
     marker.type = Marker.LINE_STRIP
     marker.action = Marker.ADD
     # marker.lifetime = rospy.Duration(1)
-    marker.scale.x = 0.09
+    marker.scale.x = 0.02
     marker.color.a = 1.0
     marker.color.r = 1
     marker.color.g = 0.0
@@ -74,7 +74,7 @@ def marker_callback(xs, ys):
     points_list = []
     points_list.append(Point(y=0,x= 0,z=0))
 
-    for i in range(11):    
+    for i in range(4):    
         points_list.append(Point(y=ys[i],x= xs[i],z=0))
 
     marker.points.extend(points_list)
@@ -83,8 +83,8 @@ def marker_callback(xs, ys):
 
 def get_goals(pts):
     goals = pts.detach().cpu().numpy()[0]
-    x = goals[:11]
-    y = goals[11:]
+    x = goals[:4]
+    y = goals[4:]
     # print(x)
     # print(y)
     marker_callback(x,y)
@@ -103,9 +103,9 @@ def publish_cmd_vel(cmd_vel):
     print(f'publish velocity {cmd_vel[0]}')
 
     cmd_msg = Twist()
-    cmd_msg.linear.x = 0.3
-    cmd_msg.angular.z = cmd_vel[0]
-    cmd_publisher.publish(cmd_msg)    
+    # cmd_msg.linear.x = 0.3
+    # cmd_msg.angular.z = cmd_vel[1]
+    # cmd_publisher.publish(cmd_msg)    
 
 def aprrox_sync_callback(lidar, rgb):
 
@@ -140,7 +140,7 @@ def aprrox_sync_callback(lidar, rgb):
 
         with torch.no_grad():
             
-            cmd, pts = model(image, pcl, local_goal)
+            pts, cmd = model(image, pcl, local_goal)
             
             image.detach()
             pcl.detach()

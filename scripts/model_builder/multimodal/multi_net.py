@@ -69,19 +69,28 @@ class MultiModalNet(nn.Module):
         if load == True:
             self.image = self.image.to('cuda')
             self.pcl = self.pcl.to('cuda')
+            self.goal_encoder = self.goal_encoder.to('cuda')
+            self.global_path_predictor = self.global_path_predictor.to('cuda')
+            self.predict_vel = self.predict_vel.to('cuda')
+            self.transformer = self.transformer.to('cuda')
+            fustion_features = self.modality_fusion_layer.to('cuda')  
+            self.global_path_encoder = self.global_path_encoder.to('cuda')    
+            self.joint_perception_path_feautres = self.joint_perception_path_feautres.to('cuda')
+            
+
             load = False
 
         pcl = pcl.to('cuda') 
         stacked_images = stacked_images.to('cuda')      
         local_goal = local_goal.to('cuda')
 
-        rnn_img_out, img_path, img_vel = self.image(stacked_images, local_goal)
-        rnn_pcl_out, pcl_path, pcl_vel = self.pcl(pcl, local_goal)
+        rnn_img_out = self.image(stacked_images, local_goal)
+        rnn_pcl_out = self.pcl(pcl, local_goal)
 
-        rnn_img_out = rnn_img_out.to('cpu')  
-        rnn_pcl_out = rnn_pcl_out.to('cpu')
-        final_img_feat = final_img_feat.to('cpu')
-        final_pcl_feat = final_pcl_feat.to('cpu')
+        # rnn_img_out = rnn_img_out.to('cpu')  
+        # rnn_pcl_out = rnn_pcl_out.to('cpu')
+        # final_img_feat = final_img_feat.to('cpu')
+        # final_pcl_feat = final_pcl_feat.to('cpu')
 
         backbone_feats = torch.cat([rnn_pcl_out, rnn_img_out], dim=-1)
         fustion_features = self.modality_fusion_layer(backbone_feats)        
@@ -107,4 +116,4 @@ class MultiModalNet(nn.Module):
 
         fusion_vel = self.predict_vel(fustion_perception_path)
 
-        return fsn_global_path, fusion_vel, img_path, img_vel, pcl_path, pcl_vel
+        return fsn_global_path, fusion_vel#, img_path, img_vel, pcl_path, pcl_vel

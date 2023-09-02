@@ -57,7 +57,9 @@ class ApplyTransformation(Dataset):
         
 
         goals = np.concatenate([ [np.array(self.local_goal)], np.ones((1,1))], axis=1).transpose()
-        all_pts =  goals * get_gaussian_weights(6,3)[:,-1]
+
+        all_pts =  goals * get_gaussian_weights(6,3)[:,4]
+        
         all_pts = all_pts[:2, :]
         local_goal = all_pts[:, -1]
 

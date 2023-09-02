@@ -18,7 +18,7 @@ class Robot_config():
         self.gx = 0 # body frame
         self.gy = 0
         self.gp = 0
-        self.los = 5
+        self.los = 2.5
         # self.los = 5
     
     def get_robot_status(self, msg):
